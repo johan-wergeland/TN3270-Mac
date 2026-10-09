@@ -7,13 +7,14 @@ struct ConnectionOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft = ConnectionSettings()
     @State private var loaded = false
+    @State private var portText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Form {
                 Section("Host") {
                     TextField("Host name or IP address", text: $draft.host)
-                    TextField("Port", value: $draft.port, format: .number.grouping(.never))
+                    TextField("Port", text: $portText)
                     TextField("LU name (optional)", text: $draft.luName)
                 }
 
@@ -56,7 +57,10 @@ struct ConnectionOptionsView: View {
             }
 
             HStack {
-                Button("Revert") { draft = model.settings }
+                Button("Revert") {
+                    draft = model.settings
+                    portText = String(draft.port)
+                }
                     .disabled(draft == model.settings)
                 Spacer()
                 Button("Save") { save() }
@@ -76,13 +80,18 @@ struct ConnectionOptionsView: View {
         .onAppear {
             if !loaded {
                 draft = model.settings
+                portText = String(draft.port)
                 loaded = true
             }
         }
+        .onChange(of: portText) { text in
+            // Updated on every keystroke so Save never sees a stale port.
+            draft.port = Int(text.trimmingCharacters(in: .whitespaces)) ?? 0
+        }
         .onChange(of: draft.useTLS) { useTLS in
             // Suggest the conventional ports when toggling TLS.
-            if useTLS && draft.port == 23 { draft.port = 992 }
-            if !useTLS && draft.port == 992 { draft.port = 23 }
+            if useTLS && draft.port == 23 { portText = "992" }
+            if !useTLS && draft.port == 992 { portText = "23" }
         }
     }
 

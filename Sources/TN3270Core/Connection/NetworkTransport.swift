@@ -72,8 +72,9 @@ public final class NetworkTransport: TN3270Transport {
                 connection.cancel()
             case .failed(let error):
                 self.onStateChange?(.failed(error.localizedDescription))
-                self.connection = nil
+                connection.cancel()
             case .cancelled:
+                connection.stateUpdateHandler = nil
                 self.onStateChange?(.disconnected)
                 self.connection = nil
             @unknown default:
