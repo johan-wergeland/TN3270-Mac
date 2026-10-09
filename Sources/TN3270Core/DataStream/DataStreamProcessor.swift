@@ -305,10 +305,12 @@ public final class DataStreamProcessor {
         ]
         var reply: [UInt8] = [DS.AID.structuredField]
         reply += field(DS.QueryCode.summary, codes)
-        reply += field(DS.QueryCode.usableArea,
-                       [0x01, 0x00] + be16(alternateColumns) + be16(alternateRows) + [0x01]
-                       + [0x00, 0x0A, 0x02, 0xE5] + [0x00, 0x02, 0x00, 0x6F] + [0x09, 0x0C]
-                       + be16(alternateColumns * alternateRows))
+        var usableArea: [UInt8] = [0x01, 0x00]
+        usableArea += be16(alternateColumns)
+        usableArea += be16(alternateRows)
+        usableArea += [0x01, 0x00, 0x0A, 0x02, 0xE5, 0x00, 0x02, 0x00, 0x6F, 0x09, 0x0C]
+        usableArea += be16(alternateColumns * alternateRows)
+        reply += field(DS.QueryCode.usableArea, usableArea)
         var colors: [UInt8] = [0x00, 0x10, 0x00, HostColor.green.rawValue]
         for color in UInt8(0xF1)...UInt8(0xFF) { colors += [color, color] }
         reply += field(DS.QueryCode.color, colors)
