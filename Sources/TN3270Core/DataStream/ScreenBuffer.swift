@@ -204,7 +204,7 @@ public struct ScreenBuffer: Sendable {
             intensified: intensified,
             hidden: hidden || cell.isFieldAttribute,
             reverse: hlByte == Highlight.reverse.rawValue,
-            underscore: hlByte == Highlight.underscore.rawValue,
+            underscore: !cell.isFieldAttribute && hlByte == Highlight.underscore.rawValue,
             blink: hlByte == Highlight.blink.rawValue
         )
     }

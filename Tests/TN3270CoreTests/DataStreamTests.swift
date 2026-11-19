@@ -52,6 +52,18 @@ final class DataStreamTests: XCTestCase {
         XCTAssertEqual(processor.screen.appearances().count, 1920)
     }
 
+    func testUnderlineStartsAtFirstDataCellRatherThanFieldAttribute() {
+        let processor = DataStreamProcessor()
+        processor.process([0xF5, 0xC3, 0x29, 0x02, 0xC0, 0x40, 0x41, 0xF4, 0x00, 0x00])
+        let appearances = processor.screen.appearances()
+
+        XCTAssertFalse(processor.screen.appearance(at: 0).underscore)
+        XCTAssertFalse(appearances[0].underscore)
+        XCTAssertTrue(processor.screen.appearance(at: 1).underscore)
+        XCTAssertTrue(appearances[1].underscore)
+        XCTAssertTrue(appearances[2].underscore)
+    }
+
     func testEraseWriteAlternateUsesModelSize() {
         let processor = DataStreamProcessor(model: .model5)
         processor.process([0x7E, 0xC3])
@@ -205,6 +217,28 @@ final class SessionTests: XCTestCase {
             XCTAssertTrue(sent.isEmpty)
             XCTAssertEqual(alarms, 0)
         }
+    }
+
+    func testNewlineLandsAtStartOfUnderlinedFieldAfterPrompt() {
+        let session = connectedSession()
+        let start = session.screen.columns + 13
+        let record: [UInt8] = [0xF5, 0xC3, 0x1D, 0x60, 0x11]
+            + DS.encodeAddress(start, bufferSize: session.screen.size)
+            + [0x29, 0x02, 0xC0, 0x40, 0x41, 0xF4]
+            + CodePage.default.encode("   ")
+            + [0x1D, 0x60]
+        session.receive(record + [Telnet.IAC, Telnet.EOR])
+        session.moveCursor(to: 40)
+
+        session.perform(.newline)
+
+        XCTAssertEqual(session.screen.cursor, start + 1)
+        XCTAssertTrue(session.screen.isProtected(start))
+        XCTAssertFalse(session.screen.isProtected(session.screen.cursor))
+        XCTAssertFalse(session.screen.appearance(at: start).underscore)
+        XCTAssertTrue(session.screen.appearance(at: session.screen.cursor).underscore)
+        session.type("A")
+        XCTAssertEqual(session.screen[start + 1].byte, CodePage.default.ebcdic(for: "A"))
     }
 
     func testNewlineFindsFirstEditablePositionPastProtectedAndEmptyFields() {
