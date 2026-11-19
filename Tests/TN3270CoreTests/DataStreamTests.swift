@@ -185,6 +185,60 @@ final class SessionTests: XCTestCase {
         XCTAssertEqual(session.screen.cursor, 8)
     }
 
+    func testNewlineIncludesEditableFieldAttributeAtStartOfNextRow() {
+        for nextRow in [1, 0] {
+            let session = connectedSession()
+            let columns = session.screen.columns
+            let start = nextRow * columns
+            var record: [UInt8] = [0xF5, 0xC3, 0x1D, 0x60]
+            for address in [start, start + 10] {
+                record += [0x11] + DS.encodeAddress(address, bufferSize: session.screen.size) + [0x1D, 0x40]
+            }
+            session.receive(record + [Telnet.IAC, Telnet.EOR])
+            session.moveCursor(to: session.screen.wrap(start - columns + 40))
+            let cells = session.screen.cells
+
+            session.perform(.newline)
+
+            XCTAssertEqual(session.screen.cursor, start + 1)
+            XCTAssertEqual(session.screen.cells, cells)
+            XCTAssertTrue(sent.isEmpty)
+            XCTAssertEqual(alarms, 0)
+        }
+    }
+
+    func testNewlineFindsFirstEditablePositionPastProtectedAndEmptyFields() {
+        let session = connectedSession()
+        let columns = session.screen.columns
+        var record: [UInt8] = [0xF5, 0xC3, 0x1D, 0x60]
+        let fields: [(Int, UInt8)] = [
+            (columns, 0x60), (columns + 5, 0x40), (columns + 6, 0x40), (columns + 12, 0x40),
+        ]
+        for (address, attribute) in fields {
+            record += [0x11] + DS.encodeAddress(address, bufferSize: session.screen.size) + [0x1D, attribute]
+        }
+        session.receive(record + [Telnet.IAC, Telnet.EOR])
+        session.moveCursor(to: 40)
+
+        session.perform(.newline)
+
+        XCTAssertEqual(session.screen.cursor, columns + 7)
+    }
+
+    func testNewlineUsesColumnZeroWhenAlreadyEditable() {
+        for formatted in [false, true] {
+            let session = connectedSession()
+            var record: [UInt8] = [0xF5, 0xC3]
+            if formatted { record += [0x1D, 0x40] }
+            session.receive(record + [Telnet.IAC, Telnet.EOR])
+            session.moveCursor(to: 40)
+
+            session.perform(.newline)
+
+            XCTAssertEqual(session.screen.cursor, session.screen.columns)
+        }
+    }
+
     func testClearSendsShortRead() {
         let session = connectedSession()
         session.receive(loginScreen() + [Telnet.IAC, Telnet.EOR])

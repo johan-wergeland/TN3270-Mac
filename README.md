@@ -62,6 +62,7 @@ menu to connect or disconnect.
 | Action | Mac shortcut |
 | --- | --- |
 | Send Enter to the host | Return or keypad Enter |
+| New Line (move to the first editable position on the next row, searching onward if needed) | Shift+Return |
 | Move to the next / previous input field | Tab / Shift+Tab |
 | PF1-PF12 | F1-F12 |
 | PF13-PF24 | Shift+F1-F12 |

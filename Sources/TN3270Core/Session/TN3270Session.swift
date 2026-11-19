@@ -265,7 +265,8 @@ public final class TN3270Session {
             if !screen.isFormatted || !screen.isProtected(next) {
                 processor.screen.cursor = next
             } else {
-                processor.screen.cursor = nextFieldPosition(after: next)
+                // Include a field attribute at the start of the target row.
+                processor.screen.cursor = nextFieldPosition(after: screen.wrap(next - 1))
             }
         case .cursorUp: processor.screen.cursor = screen.wrap(screen.cursor - screen.columns)
         case .cursorDown: processor.screen.cursor = screen.wrap(screen.cursor + screen.columns)
