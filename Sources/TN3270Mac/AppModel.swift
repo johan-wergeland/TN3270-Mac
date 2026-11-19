@@ -52,8 +52,8 @@ final class AppModel: ObservableObject {
     var statusText: String { session.statusText }
 
     var title: String {
-        guard isConnected else { return "TN3270" }
-        return "TN3270 – \(settings.host):\(settings.port)"
+        guard isConnected else { return "TN3270Mac" }
+        return "TN3270Mac – \(settings.host):\(settings.port)"
     }
 
     func connect() {

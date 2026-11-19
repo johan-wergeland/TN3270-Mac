@@ -20,9 +20,45 @@ struct TerminalScreenView: NSViewRepresentable {
 
 /// Draws the 3270 presentation space and forwards keyboard / mouse input to the session.
 final class TerminalNSView: NSView {
-    weak var model: AppModel?
+    weak var model: AppModel? {
+        didSet {
+            if oldValue !== model || selection?.rows != model?.session.screen.rows
+                || selection?.columns != model?.session.screen.columns {
+                selection = nil
+            }
+        }
+    }
 
     private let backgroundColor = NSColor.black
+    private struct TextSelection {
+        var anchor: Int
+        var head: Int
+        let rows: Int
+        let columns: Int
+
+        var range: Range<Int> { min(anchor, head)..<max(anchor, head) }
+    }
+
+    private var selection: TextSelection? {
+        didSet { needsDisplay = true }
+    }
+
+    private var currentSelection: TextSelection? {
+        guard let selection, let screen = model?.session.screen,
+              selection.rows == screen.rows, selection.columns == screen.columns else { return nil }
+        return selection
+    }
+
+    var selectedText: String? {
+        guard let model, let range = currentSelection?.range, !range.isEmpty else { return nil }
+        let screen = model.session.screen
+        var text = ""
+        for address in range {
+            if address > range.lowerBound && address % screen.columns == 0 { text.append("\n") }
+            text.append(screen.displayCharacter(at: address, codePage: model.session.codePage))
+        }
+        return text
+    }
 
     override var acceptsFirstResponder: Bool { true }
     override var isFlipped: Bool { true }
@@ -74,6 +110,7 @@ final class TerminalNSView: NSView {
         let codePage = session.codePage
         let metrics = computeMetrics(rows: screen.rows, columns: screen.columns)
         let appearances = screen.appearances()
+        let selectedRange = currentSelection?.range
 
         for row in 0..<screen.rows {
             for column in 0..<screen.columns {
@@ -89,6 +126,10 @@ final class TerminalNSView: NSView {
                     let previousForeground = foreground
                     foreground = background ?? backgroundColor
                     background = previousForeground
+                }
+                if selectedRange?.contains(address) == true {
+                    foreground = .selectedTextColor
+                    background = .selectedTextBackgroundColor
                 }
                 if let background {
                     background.setFill()
@@ -145,11 +186,18 @@ final class TerminalNSView: NSView {
 
     override func keyDown(with event: NSEvent) {
         guard let model else { return }
+        if extendSelection(with: event) { return }
         if let stroke = KeyEventMapper.stroke(for: event), let action = model.keyMap.action(for: stroke) {
+            selection = nil
             model.perform(action)
             return
         }
+        if KeyEventMapper.stroke(for: event) == KeyStroke("c", .command) {
+            copy(nil)
+            return
+        }
         if let text = KeyEventMapper.typedText(for: event) {
+            selection = nil
             model.type(text)
             return
         }
@@ -157,6 +205,7 @@ final class TerminalNSView: NSView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if window?.firstResponder === self, extendSelection(with: event) { return true }
         // Allow user-defined bindings that use ⌃ or ⌘ to take priority over menus,
         // but only while the terminal has keyboard focus.
         guard window?.firstResponder === self, let model,
@@ -164,29 +213,73 @@ final class TerminalNSView: NSView {
               let action = model.keyMap.action(for: stroke) else {
             return super.performKeyEquivalent(with: event)
         }
+        selection = nil
         model.perform(action)
         return true
+    }
+
+    private func extendSelection(with event: NSEvent) -> Bool {
+        guard let model, let stroke = KeyEventMapper.stroke(for: event),
+              stroke.modifiers == .shift else { return false }
+        let screen = model.session.screen
+        let offset: Int
+        switch stroke.key {
+        case KeyStroke.Named.left: offset = -1
+        case KeyStroke.Named.right: offset = 1
+        case KeyStroke.Named.up: offset = -screen.columns
+        case KeyStroke.Named.down: offset = screen.columns
+        default: return false
+        }
+        var selection = currentSelection ?? TextSelection(
+            anchor: screen.cursor, head: screen.cursor, rows: screen.rows, columns: screen.columns)
+        selection.head = min(screen.size, max(0, selection.head + offset))
+        self.selection = selection
+        return true
+    }
+
+    private func mousePosition(for event: NSEvent, screen: ScreenBuffer) -> (row: Int, column: Int, boundary: Int) {
+        let metrics = computeMetrics(rows: screen.rows, columns: screen.columns)
+        let point = convert(event.locationInWindow, from: nil)
+        let x = (point.x - metrics.origin.x) / metrics.cellWidth
+        let y = (point.y - metrics.origin.y) / metrics.cellHeight
+        let row = min(screen.rows - 1, max(0, Int(y.rounded(.down))))
+        let column = min(screen.columns - 1, max(0, Int(x.rounded(.down))))
+        let boundary: Int
+        if y < 0 {
+            boundary = 0
+        } else if y >= CGFloat(screen.rows) {
+            boundary = screen.size
+        } else {
+            boundary = row * screen.columns + min(screen.columns, max(0, Int(x.rounded())))
+        }
+        return (row, column, boundary)
     }
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
         guard let model else { return }
         let screen = model.session.screen
-        let metrics = computeMetrics(rows: screen.rows, columns: screen.columns)
-        let point = convert(event.locationInWindow, from: nil)
-        let column = Int(((point.x - metrics.origin.x) / metrics.cellWidth).rounded(.down))
-        let row = Int(((point.y - metrics.origin.y) / metrics.cellHeight).rounded(.down))
-        model.moveCursor(row: row, column: column)
+        let position = mousePosition(for: event, screen: screen)
+        selection = TextSelection(anchor: position.boundary, head: position.boundary,
+                                  rows: screen.rows, columns: screen.columns)
+        model.moveCursor(row: position.row, column: position.column)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let model, var selection = currentSelection else { return }
+        selection.head = mousePosition(for: event, screen: model.session.screen).boundary
+        self.selection = selection
     }
 
     @objc func copy(_ sender: Any?) {
         guard let model else { return }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(model.screenText, forType: .string)
+        NSPasteboard.general.setString(selectedText ?? model.screenText, forType: .string)
     }
 
     @objc func paste(_ sender: Any?) {
         guard let model, let text = NSPasteboard.general.string(forType: .string) else { return }
+        selection = nil
         model.paste(text)
     }
 }

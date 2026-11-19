@@ -22,6 +22,9 @@ A native macOS TN3270 terminal emulator for connecting to IBM z/OS systems.
   key combination to a 3270 function (Enter, Clear, PF1–PF24, PA1–PA3, Attn,
   SysReq, Reset, Erase EOF, Insert, field tab, …). Mappings are saved
   automatically.
+- **Text selection**: drag with the mouse or hold Shift and use the arrow keys,
+  then press Cmd+C to copy the highlighted text. Selection is local and needs no
+  host key mapping. Without a selection, Copy continues to copy the whole screen.
 
 ### Default key map
 
@@ -52,6 +55,24 @@ swift test                 # run the unit tests
 ```
 
 You can also open `Package.swift` in Xcode and run the `TN3270Mac` scheme.
+
+### Release app for Applications
+
+```sh
+bash scripts/build-app.sh
+open -R .build/release/TN3270Mac.app
+```
+
+Drag `TN3270Mac.app` from Finder into Applications, then launch it like any other
+Mac app. Quit any running copy before replacing it with a newer build.
+
+The script builds an optimized release for your Mac's architecture and packages
+it as an app with an ad-hoc signature for local use. It does not require an Apple
+Developer account. Distribution to other Macs requires separate Developer ID
+signing and notarization for normal Gatekeeper approval.
+
+The app icon is generated from `Resources/AppIcon.png` during packaging. To change
+it, replace that image with a square PNG (ideally 1024 × 1024) and rebuild.
 
 ## Project layout
 

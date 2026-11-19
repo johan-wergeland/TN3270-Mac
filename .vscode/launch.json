@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:TN3270-Mac}",
+            "name": "Debug TN3270Mac",
+            "target": "TN3270Mac",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TN3270Mac"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:TN3270-Mac}",
+            "name": "Release TN3270Mac",
+            "target": "TN3270Mac",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TN3270Mac"
+        }
+    ]
+}

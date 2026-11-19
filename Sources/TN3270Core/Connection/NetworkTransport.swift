@@ -49,6 +49,15 @@ public final class NetworkTransport: TN3270Transport {
         return NWParameters(tls: tls, tcp: tcp)
     }
 
+    static func failureDescription(for error: NWError) -> String {
+        guard case .tls(let code) = error, code == errSSLBadCert else {
+            return error.localizedDescription
+        }
+        return "TLS failed: macOS could not parse the server certificate (error \(code), bad certificate format). "
+            + "Check that the host and port use direct TLS, and ask the server administrator to check the certificate and chain for compatibility with macOS. "
+            + "Disabling certificate verification does not bypass certificate parsing."
+    }
+
     public func connect() {
         guard let port = NWEndpoint.Port(rawValue: UInt16(clamping: settings.port)) else {
             onStateChange?(.failed("Invalid port \(settings.port)"))
@@ -68,10 +77,10 @@ public final class NetworkTransport: TN3270Transport {
                 self.onStateChange?(.connected)
                 self.receiveNext()
             case .waiting(let error):
-                self.onStateChange?(.failed(error.localizedDescription))
+                self.onStateChange?(.failed(Self.failureDescription(for: error)))
                 connection.cancel()
             case .failed(let error):
-                self.onStateChange?(.failed(error.localizedDescription))
+                self.onStateChange?(.failed(Self.failureDescription(for: error)))
                 connection.cancel()
             case .cancelled:
                 connection.stateUpdateHandler = nil
@@ -88,7 +97,7 @@ public final class NetworkTransport: TN3270Transport {
         guard let connection else { return }
         connection.send(content: Data(bytes), completion: .contentProcessed { [weak self] error in
             if let error {
-                self?.onStateChange?(.failed(error.localizedDescription))
+                self?.onStateChange?(.failed(Self.failureDescription(for: error)))
             }
         })
     }
@@ -105,7 +114,7 @@ public final class NetworkTransport: TN3270Transport {
                 self.onReceive?([UInt8](data))
             }
             if let error {
-                self.onStateChange?(.failed(error.localizedDescription))
+                self.onStateChange?(.failed(Self.failureDescription(for: error)))
                 connection.cancel()
             } else if isComplete {
                 connection.cancel()

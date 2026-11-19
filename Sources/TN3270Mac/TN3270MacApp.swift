@@ -8,7 +8,7 @@ struct TN3270MacApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        Window("TN3270", id: WindowID.terminal) {
+        Window("TN3270Mac", id: WindowID.terminal) {
             TerminalWindow()
                 .environmentObject(model)
         }

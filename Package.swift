@@ -15,6 +15,7 @@ var targets: [Target] = [
 // TN3270Core is platform independent so it can be unit tested anywhere.
 products.append(.executable(name: "TN3270Mac", targets: ["TN3270Mac"]))
 targets.append(.executableTarget(name: "TN3270Mac", dependencies: ["TN3270Core"]))
+targets.append(.testTarget(name: "TN3270MacTests", dependencies: ["TN3270Mac"]))
 #endif
 
 let package = Package(
