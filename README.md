@@ -1,83 +1,93 @@
-# TN3270-Mac
+# TN3270Mac
 
-A native macOS TN3270 terminal emulator for connecting to IBM z/OS systems.
+A native Mac terminal emulator for connecting to IBM mainframes over TN3270 and
+TN3270E. Connect to your host, work with familiar 3270 screens, and use Mac-style
+text selection and copying.
 
 ## Features
 
-- **TN3270E** (RFC 2355) with device-type/LU negotiation, BIND-IMAGE, RESPONSES and
-  SYSREQ functions, with automatic fallback to traditional **TN3270** (RFC 1576/1646).
-- **SSL/TLS** via Network.framework — TLS 1.3 is the default minimum version
-  (TLS 1.2 can be selected for older hosts), with optional certificate verification
-  bypass for self-signed / private CA certificates.
-- 3270 data stream: Write, Erase/Write, Erase/Write Alternate, Read Buffer, Read
-  Modified (All), Erase All Unprotected, Write Structured Field (Read Partition
-  Query, Erase/Reset, Outbound 3270DS) and all orders (SF, SFE, SBA, SA, MF, IC,
-  PT, RA, EUA, GE), extended colors and highlighting.
-- Terminal models 2 (24×80), 3 (32×80), 4 (43×80) and 5 (27×132).
-- EBCDIC code pages 037, 273, 277, 278, 280, 284, 285, 297, 500, 1047 and the
-  Euro variants 1140–1148.
-- **Connection Options** window (Connection ▸ Connection Options…, ⇧⌘,): host /
-  IP address, port, EBCDIC code page, terminal model, LU name, TN3270E and TLS.
-- **Keyboard Options** window (Keyboard ▸ Keyboard Options…, ⌥⌘K): map any Mac
-  key combination to a 3270 function (Enter, Clear, PF1–PF24, PA1–PA3, Attn,
-  SysReq, Reset, Erase EOF, Insert, field tab, …). Mappings are saved
-  automatically.
-- **Text selection**: drag with the mouse or hold Shift and use the arrow keys,
-  then press Cmd+C to copy the highlighted text. Selection is local and needs no
-  host key mapping. Without a selection, Copy continues to copy the whole screen.
+- Secure connections with SSL/TLS and server certificate verification.
+- Support for TN3270 and TN3270E, including optional LU names.
+- Terminal models 2, 3, 4 and 5, with extended colors and highlighting.
+- Multiple EBCDIC code pages for different host languages.
+- Customizable keyboard shortcuts for Enter, PF keys, PA keys and other
+  mainframe functions.
+- Mouse-drag and Shift+Arrow text selection, with Cmd+C to copy.
+- Saved connection settings and keyboard mappings.
 
-### Default key map
+## Requirements
 
-| Mac key | 3270 function |
+- macOS 13 Ventura or later.
+- An Apple Silicon Mac (M-series) for the currently available download.
+- Access to a TN3270/TN3270E host and its connection details. You may need your
+  organization's network or VPN.
+
+No Xcode or developer tools are needed to install the downloaded app.
+
+## Install
+
+1. Open the [Releases page](https://github.com/mradrianhh/TN3270-Mac/releases).
+2. Download **TN3270Mac-arm64.zip** from the release's **Assets** section,
+   not the source-code archives.
+3. Double-click the ZIP in Finder to extract it.
+4. Drag **TN3270Mac.app** into **Applications**.
+5. Open **TN3270Mac** from Applications.
+
+The current release is an **alpha**, so expect rough edges.
+
+### If macOS blocks the app
+
+The current download is ad-hoc signed, not Developer ID signed or notarized by
+Apple. macOS may warn that it cannot verify the developer.
+
+Only if you trust the download from this repository, try opening the app, then
+go to **System Settings > Privacy & Security** and look for **Open Anyway**.
+Follow the confirmation prompts. On a managed Mac, your organization's security
+policy may prevent this; contact your administrator rather than disabling
+security protections.
+
+## Connect to a mainframe
+
+1. Open **Connection > Connection Options**.
+2. Enter the host name or IP address and port supplied by your administrator.
+3. Set SSL/TLS, terminal model, EBCDIC code page and optional LU name to match
+   your host. Keep **Verify server certificate** enabled for secure connections.
+4. Click **Save & Connect**.
+
+The status bar shows the session status. Use the toolbar or the **Connection**
+menu to connect or disconnect.
+
+## Keyboard and copying
+
+| Action | Mac shortcut |
 | --- | --- |
-| Return / keypad Enter | Enter |
-| ⇧ Return | New Line |
-| Tab / ⇧ Tab | Field Tab / Backtab |
-| F1–F12 / ⇧ F1–F12 | PF1–PF12 / PF13–PF24 |
-| Page Up / Page Down | PF7 / PF8 |
-| Esc | Clear |
-| ⌃R | Reset |
-| ⌃C | Attention |
-| ⌃S | System Request |
-| ⌃1 / ⌃2 / ⌃3 | PA1 / PA2 / PA3 |
-| End / ⌃E | Erase EOF |
-| Help (Insert) / ⌃I | Insert mode |
-| Home | Home |
-| ⌫ / ⌦ | Backspace / Delete |
+| Send Enter to the host | Return or keypad Enter |
+| Move to the next / previous input field | Tab / Shift+Tab |
+| PF1-PF12 | F1-F12 |
+| PF13-PF24 | Shift+F1-F12 |
+| PF7 / PF8 | Page Up / Page Down |
+| Clear | Esc |
+| Reset the keyboard | Control+R |
+| Select text | Drag with the mouse or hold Shift and use the arrow keys |
+| Copy selected text | Cmd+C |
 
-## Building and running
+Without a selection, Copy copies the whole screen. **Control+C sends Attention
+to the host**; use Cmd+C to copy.
 
-Requires macOS 13 or later and Xcode 15 (Swift 5.9) or later.
+Open **Keyboard > Keyboard Options** to customize host key mappings. Depending
+on your Mac's keyboard settings, you may need to hold **Fn** to use function keys.
 
-```sh
-swift run TN3270Mac        # build and launch the app
-swift test                 # run the unit tests
-```
+## Update
 
-You can also open `Package.swift` in Xcode and run the `TN3270Mac` scheme.
+Quit TN3270Mac, download and extract the newer release, then replace the app in
+Applications. If you installed an earlier build named **TN3270**, remove that
+older app to avoid keeping two copies.
 
-### Release app for Applications
+## Help and development
 
-```sh
-bash scripts/build-app.sh
-open -R .build/release/TN3270Mac.app
-```
+Report bugs or request features on the
+[Issues page](https://github.com/mradrianhh/TN3270-Mac/issues). Include your macOS
+version and app version, but do not share passwords or sensitive host data.
 
-Drag `TN3270Mac.app` from Finder into Applications, then launch it like any other
-Mac app. Quit any running copy before replacing it with a newer build.
-
-The script builds an optimized release for your Mac's architecture and packages
-it as an app with an ad-hoc signature for local use. It does not require an Apple
-Developer account. Distribution to other Macs requires separate Developer ID
-signing and notarization for normal Gatekeeper approval.
-
-The app icon is generated from `Resources/AppIcon.png` during packaging. To change
-it, replace that image with a square PNG (ideally 1024 × 1024) and rebuild.
-
-## Project layout
-
-- `Sources/TN3270Core` – platform independent protocol engine: EBCDIC code pages,
-  telnet/TN3270E negotiation, 3270 data stream processing, screen buffer,
-  key map and the Network.framework TLS transport.
-- `Sources/TN3270Mac` – SwiftUI/AppKit macOS application (built on macOS only).
-- `Tests/TN3270CoreTests` – XCTest unit tests (run on macOS and Linux).
+For building from source, testing, release packaging and protocol details, see
+the [Developer Guide](docs/DEVELOPMENT.md).
